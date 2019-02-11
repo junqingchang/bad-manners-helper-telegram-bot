@@ -8,7 +8,7 @@ A helper bot that has bad manners
 ## Using the bot
 Go to the link (https://t.me/badmannershelperbot)
 
-Use \start to start the bot
+Use `\start` to start the bot
 
 ## Built With
 * [Python3](https://www.python.org/)
