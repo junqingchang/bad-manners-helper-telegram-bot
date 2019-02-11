@@ -27,15 +27,18 @@ def menu(bot, update, user_data):
     if response == "AssignJobs":
         update.message.reply_text(
         'I need the names of people to assign task to. Hurry up you *******\n'
-        'Enter the names separated by | e.g.   personA|personB|personC')
+        'Enter the names separated by | e.g.   personA|personB|personC',
+                              reply_markup=ReplyKeyboardRemove())
         return NAMES
     elif response == "GenerateTask":
         update.message.reply_text(
         'I need the task and number of times you need it repeated. Get on with it\n'
-        'Enter the task and number using : and separated by | e.g.   taskA:1|taskB:5|taskC:3')
+        'Enter the task and number using : and separated by | e.g.   taskA:1|taskB:5|taskC:3',
+                              reply_markup=ReplyKeyboardRemove())
         return GENERATE
     else:
-        update.message.reply_text('What a waste of time. Get lost')
+        update.message.reply_text('What a waste of time. Get lost',
+                              reply_markup=ReplyKeyboardRemove())
         return ConversationHandler.END
 
 def names(bot, update, user_data):
@@ -51,7 +54,8 @@ def task(bot, update, user_data):
     logger.info("Stored Names:{}".format(user_data))
     task = (update.message.text).split("|")
     if len(task) != len(user_data['names']):
-        update.message.reply_text('Number of task and number of people doesnt tally you retard. Goodbye')
+        update.message.reply_text('Number of task and number of people doesnt tally you retard. Goodbye',
+                              reply_markup=ReplyKeyboardRemove())
     else:
         random.shuffle(task)
         random.shuffle(user_data['names'])
@@ -59,7 +63,8 @@ def task(bot, update, user_data):
         for i in range(len(task)):
             output += ('{} assigned to {}\n'.format(user_data['names'][i], task[i]))
         update.message.reply_text(output + 
-                        '\nNow I can get on with my life')
+                        '\nNow I can get on with my life',
+                              reply_markup=ReplyKeyboardRemove())
     return ConversationHandler.END
 
 def generate(bot, update, user_data):
@@ -70,7 +75,8 @@ def generate(bot, update, user_data):
         logger.info("action:{}".format(action))
         logger.info("rep:{}".format(rep))
         all_task += [action] * int(rep)
-    update.message.reply_text("|".join(all_task) + "\nThat was so easy and you couldn't do it. You're such a failure")
+    update.message.reply_text("|".join(all_task) + "\nThat was so easy and you couldn't do it. You're such a failure",
+                              reply_markup=ReplyKeyboardRemove())
     return ConversationHandler.END
 
 def cancel(bot, update):
@@ -90,9 +96,9 @@ def help(bot, update):
 
 
 def main():
-    TOKEN = '624420179:AAGtbR0DJlxwrC7KW5HrANktOQcSvYciHKI'
+    TOKEN = os.getenv("TOKEN")
     PORT = int(os.environ.get('PORT', '8443'))
-
+    HEROKU_APP_NAME = os.environ.get("HEROKU_APP_NAME")
     updater = Updater(TOKEN)
     dispatcher = updater.dispatcher
 
@@ -122,7 +128,7 @@ def main():
     updater.start_webhook(listen="0.0.0.0",
                       port=PORT,
                       url_path=TOKEN)
-    updater.bot.set_webhook("https://bad-manners-helper.herokuapp.com/" + TOKEN)
+    updater.bot.set_webhook("https://{}.herokuapp.com/{}".format(HEROKU_APP_NAME, TOKEN))
 
     updater.idle()
 
