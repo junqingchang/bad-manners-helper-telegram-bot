@@ -1,6 +1,7 @@
 from telegram import (ReplyKeyboardMarkup, ReplyKeyboardRemove)
 
 import random
+import os
 
 from telegram.ext import (Updater, CommandHandler, MessageHandler, Filters, RegexHandler, ConversationHandler)
 
@@ -89,7 +90,10 @@ def help(bot, update):
 
 
 def main():
-    updater = Updater(token='624420179:AAGtbR0DJlxwrC7KW5HrANktOQcSvYciHKI')
+    TOKEN = '624420179:AAGtbR0DJlxwrC7KW5HrANktOQcSvYciHKI'
+    PORT = int(os.environ.get('PORT', '8443'))
+
+    updater = Updater(TOKEN)
     dispatcher = updater.dispatcher
 
     conv_handler = ConversationHandler(
@@ -115,7 +119,10 @@ def main():
     dispatcher.add_handler(help_handler)
     dispatcher.add_error_handler(error)
     
-    updater.start_polling()
+    updater.start_webhook(listen="0.0.0.0",
+                      port=PORT,
+                      url_path=TOKEN)
+    updater.bot.set_webhook("https://bad-manners-helper.herokuapp.com/" + TOKEN)
 
     updater.idle()
 
