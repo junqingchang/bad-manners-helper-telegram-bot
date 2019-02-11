@@ -1,1 +1,1 @@
-worker: python randomiser.py
+web: python randomiser.py
