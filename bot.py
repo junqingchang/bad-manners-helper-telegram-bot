@@ -1,11 +1,11 @@
-from telegram import (ReplyKeyboardMarkup, ReplyKeyboardRemove)
+from telegram import (ReplyKeyboardMarkup, ReplyKeyboardRemove, InlineKeyboardButton, InlineKeyboardMarkup)
 
 import random
 import os
 import pyrebase
 import string
 
-from telegram.ext import (Updater, CommandHandler, MessageHandler, Filters, RegexHandler, ConversationHandler)
+from telegram.ext import (Updater, CommandHandler, MessageHandler, Filters, RegexHandler, ConversationHandler, CallbackQueryHandler)
 
 import logging
 
@@ -26,7 +26,6 @@ def start(bot, update):
         'Send /generate to generate job list\n'
         'Send /newpayment to create a new payment tracker\n'
         'Send /paymentstatus <payment_id> to check payment status\n'
-        'Send /paid <payment_id>|<name in payment> to register payment\n'
         'Send /paymentcomplete <payment_id>|<passcode> to complete the payment and remove the entry\n'
         'Make up your mind. Choose what you want to do', reply_markup=ReplyKeyboardRemove())
 
@@ -157,21 +156,36 @@ def paymentstatus(bot, update, user_data, args):
 
     payment_info = (db.child(message_id).get()).val()
 
+    
+
     if payment_info != None:
-        output = 'PAY UP YOU LAZY PEOPLE\n\n' + payment_info['message']
-        output += '\n\nSend /paid {}|<your name> to me to mark yourself as paid (Perferably DM to avoid flooding)'.format(message_id)
+        keyboard = [[]]
+        formatter = 0
+        output = 'PAY UP YOU LAZY PEOPLE\n\n' + payment_info['message'] + '\n\n'
         for key in payment_info['payers']:
-            output += '\n' + key + ' ' + payment_info['payers'][key]
-        update.message.reply_text(output,
-                              reply_markup=ReplyKeyboardRemove())
+            keyboard[formatter].append(InlineKeyboardButton(key, callback_data='{}|{}'.format(key, message_id)))
+            if len(keyboard[formatter]) == 5:
+                keyboard.append([])
+                formatter += 1
+            if payment_info['payers'][key] == 'paid':
+                output += '\n' + key + ' ---- PAID'
+            else:
+                output += '\n' + key
+
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        update.message.reply_text(output, reply_markup=reply_markup)
+
     else:
         update.message.reply_text('Do you think I\'m 3? That payment ID doesnt exist',
                               reply_markup=ReplyKeyboardRemove())
     
     return ConversationHandler.END
 
-def paid(bot, update, user_data, args):
-    message_id, user = args[0].split('|')
+def button(bot, update):
+    query = update.callback_query
+    user, message_id = query.data.split("|")
+    logger.info("name " + user)
+    logger.info("Message_id " + message_id)
 
     DB_NAME = os.environ.get("DB_NAME")
     DB_API = os.environ.get("DB_API")
@@ -186,18 +200,67 @@ def paid(bot, update, user_data, args):
     db = firebase.database()
 
     payment_info = (db.child(message_id).get()).val()
-
     if payment_info != None:
         if user in payment_info['payers']:
-            db.child(message_id).child('payers').update({user: '    -PAID'}) 
-            update.message.reply_text('{} paid'.format(user),
-                              reply_markup=ReplyKeyboardRemove())
+            if payment_info['payers'][user] == 'paid':
+                logger.info("undo-ing pay")
+                payment_info['payers'][user] = ''
+                db.child(message_id).update(payment_info)
+            else:
+                logger.info("paying")
+                payment_info['payers'][user] = 'paid'
+                db.child(message_id).update(payment_info)
         else:
-            update.message.reply_text('Do you think I\'m 3? That user doesnt exist',
-                              reply_markup=ReplyKeyboardRemove())
+            update.message.reply_text('Do you think I\'m 3? That user doesnt exist')
+        keyboard = [[]]
+        formatter = 0
+        output = 'PAY UP YOU LAZY PEOPLE\n\n' + payment_info['message'] + '\n\n'
+
+        for key in payment_info['payers']:
+            keyboard[formatter].append(InlineKeyboardButton(key, callback_data='{}|{}'.format(key, message_id)))
+            if len(keyboard[formatter]) == 5:
+                keyboard.append([])
+                formatter += 1
+            if payment_info['payers'][key] == 'paid':
+                output += '\n' + key + ' ---- PAID'
+            else:
+                output += '\n' + key
+
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        query.edit_message_text(text=output,reply_markup = reply_markup)
     else:
         update.message.reply_text('Do you think I\'m 3? That payment ID doesnt exist',
                               reply_markup=ReplyKeyboardRemove())
+
+# DEPRECATED
+# def paid(bot, update, user_data, args):
+#     message_id, user = args[0].split('|')
+
+#     DB_NAME = os.environ.get("DB_NAME")
+#     DB_API = os.environ.get("DB_API")
+#     config = {
+#     "apiKey": DB_API,
+#     "authDomain": "{}.firebaseapp.com".format(DB_NAME),
+#     "databaseURL": "https://{}.firebaseio.com".format(DB_NAME),
+#     "storageBucket": "{}.appspot.com".format(DB_NAME)
+#     }
+
+#     firebase = pyrebase.initialize_app(config)
+#     db = firebase.database()
+
+#     payment_info = (db.child(message_id).get()).val()
+
+#     if payment_info != None:
+#         if user in payment_info['payers']:
+#             db.child(message_id).child('payers').update({user: 'paid'}) 
+#             update.message.reply_text('{} paid'.format(user),
+#                               reply_markup=ReplyKeyboardRemove())
+#         else:
+#             update.message.reply_text('Do you think I\'m 3? That user doesnt exist',
+#                               reply_markup=ReplyKeyboardRemove())
+#     else:
+#         update.message.reply_text('Do you think I\'m 3? That payment ID doesnt exist',
+#                               reply_markup=ReplyKeyboardRemove())
 
 def paymentcomplete(bot, update, args):
     message_id, passcode = args[0].split('|')
@@ -263,7 +326,6 @@ def help(bot, update):
                                 'Send /generate to create the task list for assigning jobs\n' 
                                 'Send /newpayment to create a new payment tracker\n'
                                 'Send /paymentstatus <payment_id> to check payment status\n'
-                                'Send /paid <payment_id>|<name_in_payment> to register payment\n'
                                 'Send /paymentcomplete <payment_id>|<passcode> to complete the payment and remove the entry\n'
                                 'If you have any other queries please direct them to Jun Qing or raise an issue at https://github.com/junqingchang/bad-manners-helper-telegram-bot')
 
@@ -312,7 +374,8 @@ def main():
 
     status_handler = CommandHandler('paymentstatus', paymentstatus, pass_user_data = True, pass_args = True)
 
-    paid_handler = CommandHandler('paid', paid, pass_user_data = True, pass_args = True)
+    # DEPRECATED
+    # paid_handler = CommandHandler('paid', paid, pass_user_data = True, pass_args = True)
 
     help_handler = CommandHandler('help', help)
 
@@ -328,11 +391,13 @@ def main():
     dispatcher.add_handler(generate_handler)
     dispatcher.add_handler(payment_handler)
     dispatcher.add_handler(status_handler)
-    dispatcher.add_handler(paid_handler)
+    # DEPRECATED
+    # dispatcher.add_handler(paid_handler)
     dispatcher.add_handler(complete_handler)
     dispatcher.add_handler(master_handler)
     dispatcher.add_handler(help_handler)
     dispatcher.add_error_handler(error)
+    dispatcher.add_handler(CallbackQueryHandler(button))
     
     updater.start_webhook(listen="0.0.0.0",
                       port=PORT,
