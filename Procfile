@@ -1,1 +1,1 @@
-web: python randomiser.py
+web: python bot.py
