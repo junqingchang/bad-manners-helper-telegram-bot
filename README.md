@@ -17,6 +17,9 @@ Use `\start` to start the bot and see a list of commands
 * [Firebase](https://firebase.google.com/)
 * [Heroku](https://www.heroku.com/)
 
+## Acknowledgements
+* References https://medium.com/python4you/creating-telegram-bot-and-deploying-it-on-heroku-471de1d96554 for deploying on heroku
+
 ## Authors
 * **Chang Jun Qing**
 * [**Shaun Toh**](https://github.com/Shaun2h) - Tester
