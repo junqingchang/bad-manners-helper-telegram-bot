@@ -7,7 +7,7 @@ A helper bot that has bad manners
 * Payment Manager to check who paid
 
 ## Using the bot
-Go to the link (https://t.me/badmannershelperbot)
+The bot has been decomissioned, but feel free to use the code
 
 Use `\start` to start the bot and see a list of commands
 
